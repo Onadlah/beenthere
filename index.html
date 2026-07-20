@@ -12,16 +12,14 @@
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./icon-180.png">
 
-<!-- jsVectorMap (clickable world map) from CDN -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/jsvectormap@1.6.0/dist/css/jsvectormap.min.css">
+<!-- jsVectorMap (clickable world map) — correct CDN paths, pinned to 1.7.0 -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/[email protected]/dist/jsvectormap.min.css">
 
 <style>
   :root{
     --ink:#0E1116; --panel:#161B22; --panel-2:#1C232D; --line:#28313D;
     --text:#E6EAF0; --muted:#8B95A5;
-    --land:#33405A;        /* unvisited land */
-    --visited:#34D399;     /* visited land */
-    --amber:#F5B851;
+    --land:#33405A; --visited:#34D399; --amber:#F5B851;
     --mono:"SF Mono","JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
     --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
   }
@@ -33,7 +31,7 @@
     padding:0 16px calc(40px + env(safe-area-inset-bottom));
     max-width:760px; margin:0 auto; min-height:100vh;
   }
-  h1{margin:0; font-weight:650; letter-spacing:-0.02em;}
+  h1{margin:0;}
   .mono{font-family:var(--mono); font-variant-numeric:tabular-nums;}
 
   header{display:flex; align-items:center; gap:10px; padding:22px 4px 12px;}
@@ -43,7 +41,6 @@
   header .name{font-size:15px; text-transform:uppercase; letter-spacing:.2em; font-weight:700;}
   header .tag{color:var(--muted); font-size:12px; margin-top:1px;}
 
-  /* stats */
   .stats{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin:6px 0 14px;}
   .stat{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:14px;}
   .stat .v{font-family:var(--mono); font-variant-numeric:tabular-nums; font-size:26px; font-weight:600; line-height:1;}
@@ -51,13 +48,11 @@
   .stat .k{color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.1em; margin-top:6px;}
   .stat .v.mint{color:var(--visited);}
 
-  /* map */
   #map-wrap{background:var(--panel); border:1px solid var(--line); border-radius:18px; overflow:hidden;}
-  #map{height:56vh; min-height:320px; width:100%;}
-  #map-msg{display:none; padding:40px 20px; text-align:center; color:var(--muted); font-size:14px;}
+  #map{height:56vh; min-height:340px; width:100%;}
+  #map-msg{display:none; padding:40px 20px; text-align:center; color:var(--muted); font-size:14px; line-height:1.6;}
   .hint{color:var(--muted); font-size:12px; margin:8px 4px 0; text-align:center;}
 
-  /* search */
   .search{margin-top:16px;}
   label{display:block; color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.12em; margin:0 0 6px 2px;}
   input[type=text]{
@@ -67,7 +62,6 @@
   }
   input[type=text]:focus{border-color:var(--visited);}
 
-  /* visited chips */
   .section-label{color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.14em; margin:22px 4px 10px; display:flex; justify-content:space-between;}
   .chips{display:flex; flex-wrap:wrap; gap:8px;}
   .chip{background:var(--panel); border:1px solid var(--line); border-radius:99px; padding:7px 12px; font-size:13px; display:flex; align-items:center; gap:7px;}
@@ -75,21 +69,19 @@
   .chip .x:hover{color:var(--amber);}
   .empty{color:var(--muted); font-size:14px; border:1px dashed var(--line); border-radius:14px; padding:26px 18px; text-align:center;}
 
-  /* data */
   .data{display:flex; flex-wrap:wrap; gap:8px; margin:22px 0 8px; justify-content:center;}
   .btn{border:1px solid var(--line); background:var(--panel-2); color:var(--text); border-radius:11px;
     padding:10px 14px; font-size:13px; font-weight:600; font-family:var(--sans); cursor:pointer; flex:1; min-width:120px;}
   .btn:active{transform:scale(.99);}
   .foot{color:var(--muted); font-size:11px; text-align:center; margin:14px 0 8px; line-height:1.6;}
 
-  /* jsvectormap tooltip tweak */
   .jvm-tooltip{background:#111826; border:1px solid var(--line); font-family:var(--sans); border-radius:8px;}
 </style>
 </head>
 <body>
 
 <header>
-  <div class="logo">✈</div>
+  <div class="logo">&#9992;</div>
   <div>
     <div class="name">Been There</div>
     <div class="tag">tap a country you've visited</div>
@@ -106,11 +98,11 @@
   <div id="map"></div>
   <div id="map-msg"></div>
 </div>
-<p class="hint">Pinch to zoom · drag to pan · tap a country to toggle it</p>
+<p class="hint">Pinch to zoom &middot; drag to pan &middot; tap a country to toggle it</p>
 
 <div class="search">
   <label>Add by name</label>
-  <input type="text" id="search" list="country-list" placeholder="Start typing a country…" autocomplete="off">
+  <input type="text" id="search" list="country-list" placeholder="Start typing a country..." autocomplete="off">
   <datalist id="country-list"></datalist>
 </div>
 
@@ -127,54 +119,48 @@
 </div>
 <div class="foot" id="foot">Saved only on this device. The map itself loads from the internet, so you need a connection the first time.</div>
 
-<!-- jsVectorMap library + world map data -->
-<script src="https://cdn.jsdelivr.net/npm/jsvectormap@1.6.0/dist/js/jsvectormap.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/jsvectormap@1.6.0/dist/maps/world.js"></script>
+<!-- jsVectorMap core + world map data (correct paths) -->
+<script src="https://cdn.jsdelivr.net/npm/[email protected]"></script>
+<script src="https://cdn.jsdelivr.net/npm/[email protected]/dist/maps/world.js"></script>
 
 <script>
 /* ============================================================
    Been There — a world map of the countries you've visited.
-   Visited codes (ISO-3166 alpha-2) are stored in localStorage.
-   The map comes from jsVectorMap (loaded from a CDN at runtime).
+   Visited ISO-3166 alpha-2 codes are saved in localStorage.
+   Country names + continents are embedded below, so the chips
+   and search never depend on the map library's internals.
    ============================================================ */
 
 const KEY = 'beenthere_v1';
-const TOTAL_COUNTRIES = 195; // UN members + observers, the common "how many countries" figure
+const TOTAL_COUNTRIES = 195;
 
-/* ISO2 -> continent (best-effort; used only for the continents stat) */
-const CONTINENTS = {};
-(function(){
-  const groups = {
-    Europe:['AL','AD','AT','BY','BE','BA','BG','HR','CY','CZ','DK','EE','FI','FR','DE','GR','HU','IS','IE','IT','XK','LV','LI','LT','LU','MT','MD','MC','ME','NL','MK','NO','PL','PT','RO','RU','SM','RS','SK','SI','ES','SE','CH','UA','GB','VA'],
-    Asia:['AF','AM','AZ','BH','BD','BT','BN','KH','CN','GE','IN','ID','IR','IQ','IL','JP','JO','KZ','KW','KG','LA','LB','MY','MV','MN','MM','NP','KP','OM','PK','PS','PH','QA','SA','SG','KR','LK','SY','TW','TJ','TH','TL','TR','TM','AE','UZ','VN','YE'],
-    Africa:['DZ','AO','BJ','BW','BF','BI','CV','CM','CF','TD','KM','CG','CD','CI','DJ','EG','GQ','ER','SZ','ET','GA','GM','GH','GN','GW','KE','LS','LR','LY','MG','MW','ML','MR','MU','MA','MZ','NA','NE','NG','RW','ST','SN','SC','SL','SO','ZA','SS','SD','TZ','TG','TN','UG','ZM','ZW'],
-    'North America':['AG','BS','BB','BZ','CA','CR','CU','DM','DO','SV','GD','GT','HT','HN','JM','MX','NI','PA','KN','LC','VC','TT','US','GL'],
-    'South America':['AR','BO','BR','CL','CO','EC','GY','PY','PE','SR','UY','VE'],
-    Oceania:['AU','FJ','KI','MH','FM','NR','NZ','PW','PG','WS','SB','TO','TV','VU'],
-    Antarctica:['AQ']
-  };
-  for(const cont in groups) groups[cont].forEach(c=>CONTINENTS[c]=cont);
-})();
+/* Single source of truth: [code, name] grouped by continent. */
+const DATA = {
+  'Europe':[['AL','Albania'],['AD','Andorra'],['AT','Austria'],['BY','Belarus'],['BE','Belgium'],['BA','Bosnia and Herzegovina'],['BG','Bulgaria'],['HR','Croatia'],['CY','Cyprus'],['CZ','Czechia'],['DK','Denmark'],['EE','Estonia'],['FI','Finland'],['FR','France'],['DE','Germany'],['GR','Greece'],['HU','Hungary'],['IS','Iceland'],['IE','Ireland'],['IT','Italy'],['XK','Kosovo'],['LV','Latvia'],['LI','Liechtenstein'],['LT','Lithuania'],['LU','Luxembourg'],['MT','Malta'],['MD','Moldova'],['MC','Monaco'],['ME','Montenegro'],['NL','Netherlands'],['MK','North Macedonia'],['NO','Norway'],['PL','Poland'],['PT','Portugal'],['RO','Romania'],['RU','Russia'],['SM','San Marino'],['RS','Serbia'],['SK','Slovakia'],['SI','Slovenia'],['ES','Spain'],['SE','Sweden'],['CH','Switzerland'],['UA','Ukraine'],['GB','United Kingdom'],['VA','Vatican City']],
+  'Asia':[['AF','Afghanistan'],['AM','Armenia'],['AZ','Azerbaijan'],['BH','Bahrain'],['BD','Bangladesh'],['BT','Bhutan'],['BN','Brunei'],['KH','Cambodia'],['CN','China'],['GE','Georgia'],['IN','India'],['ID','Indonesia'],['IR','Iran'],['IQ','Iraq'],['IL','Israel'],['JP','Japan'],['JO','Jordan'],['KZ','Kazakhstan'],['KW','Kuwait'],['KG','Kyrgyzstan'],['LA','Laos'],['LB','Lebanon'],['MY','Malaysia'],['MV','Maldives'],['MN','Mongolia'],['MM','Myanmar'],['NP','Nepal'],['KP','North Korea'],['OM','Oman'],['PK','Pakistan'],['PS','Palestine'],['PH','Philippines'],['QA','Qatar'],['SA','Saudi Arabia'],['SG','Singapore'],['KR','South Korea'],['LK','Sri Lanka'],['SY','Syria'],['TW','Taiwan'],['TJ','Tajikistan'],['TH','Thailand'],['TL','Timor-Leste'],['TR','Turkey'],['TM','Turkmenistan'],['AE','United Arab Emirates'],['UZ','Uzbekistan'],['VN','Vietnam'],['YE','Yemen']],
+  'Africa':[['DZ','Algeria'],['AO','Angola'],['BJ','Benin'],['BW','Botswana'],['BF','Burkina Faso'],['BI','Burundi'],['CV','Cape Verde'],['CM','Cameroon'],['CF','Central African Republic'],['TD','Chad'],['KM','Comoros'],['CG','Congo'],['CD','DR Congo'],['CI',"Côte d'Ivoire"],['DJ','Djibouti'],['EG','Egypt'],['GQ','Equatorial Guinea'],['ER','Eritrea'],['SZ','Eswatini'],['ET','Ethiopia'],['GA','Gabon'],['GM','Gambia'],['GH','Ghana'],['GN','Guinea'],['GW','Guinea-Bissau'],['KE','Kenya'],['LS','Lesotho'],['LR','Liberia'],['LY','Libya'],['MG','Madagascar'],['MW','Malawi'],['ML','Mali'],['MR','Mauritania'],['MU','Mauritius'],['MA','Morocco'],['MZ','Mozambique'],['NA','Namibia'],['NE','Niger'],['NG','Nigeria'],['RW','Rwanda'],['ST','São Tomé and Príncipe'],['SN','Senegal'],['SC','Seychelles'],['SL','Sierra Leone'],['SO','Somalia'],['ZA','South Africa'],['SS','South Sudan'],['SD','Sudan'],['TZ','Tanzania'],['TG','Togo'],['TN','Tunisia'],['UG','Uganda'],['EH','Western Sahara'],['ZM','Zambia'],['ZW','Zimbabwe']],
+  'North America':[['AG','Antigua and Barbuda'],['BS','Bahamas'],['BB','Barbados'],['BZ','Belize'],['CA','Canada'],['CR','Costa Rica'],['CU','Cuba'],['DM','Dominica'],['DO','Dominican Republic'],['SV','El Salvador'],['GD','Grenada'],['GL','Greenland'],['GT','Guatemala'],['HT','Haiti'],['HN','Honduras'],['JM','Jamaica'],['MX','Mexico'],['NI','Nicaragua'],['PA','Panama'],['KN','Saint Kitts and Nevis'],['LC','Saint Lucia'],['VC','Saint Vincent and the Grenadines'],['TT','Trinidad and Tobago'],['US','United States']],
+  'South America':[['AR','Argentina'],['BO','Bolivia'],['BR','Brazil'],['CL','Chile'],['CO','Colombia'],['EC','Ecuador'],['FK','Falkland Islands'],['GY','Guyana'],['PY','Paraguay'],['PE','Peru'],['SR','Suriname'],['UY','Uruguay'],['VE','Venezuela']],
+  'Oceania':[['AU','Australia'],['FJ','Fiji'],['KI','Kiribati'],['MH','Marshall Islands'],['FM','Micronesia'],['NR','Nauru'],['NZ','New Zealand'],['NC','New Caledonia'],['PW','Palau'],['PG','Papua New Guinea'],['WS','Samoa'],['SB','Solomon Islands'],['TO','Tonga'],['TV','Tuvalu'],['VU','Vanuatu']],
+  'Antarctica':[['AQ','Antarctica']]
+};
+const NAMES = {}, CONTINENTS = {};
+for(const cont in DATA){ DATA[cont].forEach(([c,n])=>{ NAMES[c]=n; CONTINENTS[c]=cont; }); }
 
 let map = null;
 let visited = new Set();
-let names = {};   // code -> country name (from map data)
+let suppress = false;   // prevents feedback loops during programmatic selection
 
 /* ---------- storage ---------- */
 function load(){
-  try{
-    const raw = localStorage.getItem(KEY);
-    if(raw){ const d = JSON.parse(raw); if(Array.isArray(d.visited)) visited = new Set(d.visited); }
-  }catch(e){}
+  try{ const raw = localStorage.getItem(KEY); if(raw){ const d=JSON.parse(raw); if(Array.isArray(d.visited)) visited=new Set(d.visited); } }catch(e){}
 }
-function save(){
-  try{ localStorage.setItem(KEY, JSON.stringify({ visited:[...visited] })); }catch(e){}
-}
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify({visited:[...visited]})); }catch(e){} }
 
-/* ---------- map setup ---------- */
+/* ---------- map ---------- */
 function initMap(){
   if(typeof jsVectorMap === 'undefined'){
-    showMapError('The map library could not load. Check your internet connection and reload.');
+    showMapError('The map library could not load. Check your internet connection and reload the page.');
     return;
   }
   try{
@@ -184,8 +170,8 @@ function initMap(){
       backgroundColor:'transparent',
       zoomButtons:true,
       zoomOnScroll:true,
+      bindTouchEvents:true,
       regionsSelectable:true,
-      selectedRegions:[...visited],
       regionStyle:{
         initial:{ fill:'#33405A', stroke:'#0E1116', strokeWidth:0.4 },
         hover:{ fill:'#F5B851' },
@@ -193,22 +179,20 @@ function initMap(){
         selectedHover:{ fill:'#34D399' }
       },
       onRegionSelected(code, isSelected, selectedRegions){
+        if(suppress) return;
         visited = new Set(selectedRegions || []);
-        save();
-        updateStats();
-        renderChips();
+        save(); updateStats(); renderChips();
       },
-      onRegionTooltipShow(event, tooltip, code){
-        // keep default (shows country name)
+      onLoaded(m){
+        suppress = true;
+        try{ m.setSelectedRegions([...visited]); }catch(e){}
+        suppress = false;
+        updateStats(); renderChips();
+        window.addEventListener('resize', ()=>{ try{ m.updateSize(); }catch(e){} });
       }
     });
-
-    // Pull country names from the loaded map data for the search list + chips.
-    const paths = (map.mapData && map.mapData.paths) || {};
-    for(const code in paths){ names[code] = paths[code].name || code; }
     buildDatalist();
-    updateStats();
-    renderChips();
+    updateStats(); renderChips();
   }catch(err){
     console.error(err);
     showMapError('Something went wrong drawing the map. Reload to try again.');
@@ -216,97 +200,87 @@ function initMap(){
 }
 function showMapError(msg){
   document.getElementById('map').style.display='none';
-  const el = document.getElementById('map-msg');
-  el.style.display='block';
-  el.textContent = msg;
+  const el=document.getElementById('map-msg'); el.style.display='block'; el.textContent=msg;
 }
 
 /* ---------- stats ---------- */
 function updateStats(){
   const n = visited.size;
   document.getElementById('s-count').textContent = n;
-  const pct = Math.round((n / TOTAL_COUNTRIES) * 100);
-  document.getElementById('s-pct').innerHTML = pct + '<span class="u">%</span>';
-  const conts = new Set();
-  visited.forEach(c=>{ if(CONTINENTS[c]) conts.add(CONTINENTS[c]); });
+  document.getElementById('s-pct').innerHTML = Math.round((n/TOTAL_COUNTRIES)*100) + '<span class="u">%</span>';
+  const conts = new Set(); visited.forEach(c=>{ if(CONTINENTS[c]) conts.add(CONTINENTS[c]); });
   document.getElementById('s-cont').innerHTML = conts.size + '<span class="u">/7</span>';
-  document.getElementById('count-label').textContent = n ? n + ' visited' : '';
+  document.getElementById('count-label').textContent = n ? n+' visited' : '';
 }
 
 /* ---------- chips ---------- */
 function renderChips(){
-  const wrap = document.getElementById('chips');
-  const empty = document.getElementById('empty');
+  const wrap=document.getElementById('chips'), empty=document.getElementById('empty');
   if(!visited.size){ wrap.innerHTML=''; empty.style.display='block'; return; }
   empty.style.display='none';
-  const list = [...visited].map(c=>({ c, n: names[c] || c })).sort((a,b)=>a.n.localeCompare(b.n));
-  wrap.innerHTML = list.map(({c,n})=>
-    `<span class="chip">${esc(n)}<span class="x" onclick="removeCountry('${c}')">✕</span></span>`
-  ).join('');
+  const list=[...visited].map(c=>({c,n:NAMES[c]||c})).sort((a,b)=>a.n.localeCompare(b.n));
+  wrap.innerHTML=list.map(({c,n})=>`<span class="chip">${esc(n)}<span class="x" onclick="removeCountry('${c}')">&#10005;</span></span>`).join('');
 }
 function esc(s){ return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
 
 /* ---------- add / remove ---------- */
-function syncMap(){
-  if(map && map.setSelectedRegions){
-    try{ map.clearSelectedRegions(); map.setSelectedRegions([...visited]); }catch(e){}
-  }
-}
 function addCountry(code){
-  if(!code) return;
-  visited.add(code);
-  save(); syncMap(); updateStats(); renderChips();
+  if(!code || visited.has(code)) return;
+  visited.add(code); save();
+  suppress=true; try{ if(map&&map.setSelectedRegions) map.setSelectedRegions([...visited]); }catch(e){} suppress=false;
+  updateStats(); renderChips();
 }
 function removeCountry(code){
-  visited.delete(code);
-  save(); syncMap(); updateStats(); renderChips();
+  visited.delete(code); save();
+  suppress=true; try{ if(map&&map.clearSelectedRegions) map.clearSelectedRegions(code); }catch(e){} suppress=false;
+  updateStats(); renderChips();
 }
 
-/* ---------- search (datalist) ---------- */
+/* ---------- search ---------- */
 function buildDatalist(){
-  const dl = document.getElementById('country-list');
-  dl.innerHTML = Object.keys(names).sort((a,b)=>names[a].localeCompare(names[b]))
-    .map(c=>`<option value="${esc(names[c])}"></option>`).join('');
+  const dl=document.getElementById('country-list');
+  dl.innerHTML=Object.keys(NAMES).sort((a,b)=>NAMES[a].localeCompare(NAMES[b]))
+    .map(c=>`<option value="${esc(NAMES[c])}"></option>`).join('');
 }
 document.getElementById('search').addEventListener('change', function(){
-  const val = this.value.trim().toLowerCase();
-  const code = Object.keys(names).find(c=>names[c].toLowerCase()===val);
+  const val=this.value.trim().toLowerCase();
+  const code=Object.keys(NAMES).find(c=>NAMES[c].toLowerCase()===val);
   if(code){ addCountry(code); this.value=''; }
 });
 
-/* ---------- data portability ---------- */
-function download(filename, text, type){
-  const blob = new Blob([text],{type}); const url = URL.createObjectURL(blob);
-  const a = document.createElement('a'); a.href=url; a.download=filename; a.click();
+/* ---------- data ---------- */
+function download(filename,text,type){
+  const blob=new Blob([text],{type}); const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download=filename; a.click();
   setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
 function exportJSON(){ download('been-there-backup.json', JSON.stringify({visited:[...visited]},null,2), 'application/json'); }
 function exportCSV(){
-  const rows = [['Code','Country','Continent']];
-  [...visited].sort().forEach(c=>rows.push([c, names[c]||'', CONTINENTS[c]||'']));
-  const csv = rows.map(r=>r.map(x=>`"${String(x).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const rows=[['Code','Country','Continent']];
+  [...visited].sort().forEach(c=>rows.push([c, NAMES[c]||'', CONTINENTS[c]||'']));
+  const csv=rows.map(r=>r.map(x=>`"${String(x).replace(/"/g,'""')}"`).join(',')).join('\n');
   download('been-there.csv', csv, 'text/csv');
 }
 function importJSON(ev){
-  const f = ev.target.files[0]; if(!f) return;
-  const r = new FileReader();
-  r.onload = ()=>{
+  const f=ev.target.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=()=>{
     try{
-      const d = JSON.parse(r.result);
-      if(!Array.isArray(d.visited)) throw 0;
-      visited = new Set(d.visited);
-      save(); syncMap(); updateStats(); renderChips();
-      document.getElementById('foot').textContent = `Imported ${visited.size} countries.`;
-    }catch(e){ document.getElementById('foot').textContent = "That file didn't look like a Been There backup."; }
+      const d=JSON.parse(r.result); if(!Array.isArray(d.visited)) throw 0;
+      visited=new Set(d.visited); save();
+      suppress=true; try{ if(map){ map.clearSelectedRegions(); map.setSelectedRegions([...visited]); } }catch(e){} suppress=false;
+      updateStats(); renderChips();
+      document.getElementById('foot').textContent=`Imported ${visited.size} countries.`;
+    }catch(e){ document.getElementById('foot').textContent="That file didn't look like a Been There backup."; }
     ev.target.value='';
   };
   r.readAsText(f);
 }
 function clearAll(){
   if(!confirm('Clear every country from the map? This can\u2019t be undone. Export a backup first if you want to keep it.')) return;
-  visited = new Set();
-  try{ localStorage.removeItem(KEY); }catch(e){}
-  save(); syncMap(); updateStats(); renderChips();
+  visited=new Set(); try{ localStorage.removeItem(KEY); }catch(e){} save();
+  suppress=true; try{ if(map) map.clearSelectedRegions(); }catch(e){} suppress=false;
+  updateStats(); renderChips();
 }
 
 /* ---------- init ---------- */
