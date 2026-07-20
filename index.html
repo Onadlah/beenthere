@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Been There — countries you've visited</title>
+
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Been There">
+<meta name="theme-color" content="#0E1116">
+<link rel="manifest" href="./manifest.json">
+<link rel="apple-touch-icon" href="./icon-180.png">
+
+<!-- jsVectorMap (clickable world map) from CDN -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/jsvectormap@1.6.0/dist/css/jsvectormap.min.css">
+
+<style>
+  :root{
+    --ink:#0E1116; --panel:#161B22; --panel-2:#1C232D; --line:#28313D;
+    --text:#E6EAF0; --muted:#8B95A5;
+    --land:#33405A;        /* unvisited land */
+    --visited:#34D399;     /* visited land */
+    --amber:#F5B851;
+    --mono:"SF Mono","JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;}
+  body{
+    font-family:var(--sans); background:var(--ink); color:var(--text);
+    -webkit-tap-highlight-color:transparent;
+    padding:0 16px calc(40px + env(safe-area-inset-bottom));
+    max-width:760px; margin:0 auto; min-height:100vh;
+  }
+  h1{margin:0; font-weight:650; letter-spacing:-0.02em;}
+  .mono{font-family:var(--mono); font-variant-numeric:tabular-nums;}
+
+  header{display:flex; align-items:center; gap:10px; padding:22px 4px 12px;}
+  .logo{width:30px;height:30px;border-radius:9px;
+    background:linear-gradient(150deg,var(--visited),#2AA9BD);
+    display:grid;place-items:center;color:#06120C;font-weight:800;font-size:16px;}
+  header .name{font-size:15px; text-transform:uppercase; letter-spacing:.2em; font-weight:700;}
+  header .tag{color:var(--muted); font-size:12px; margin-top:1px;}
+
+  /* stats */
+  .stats{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin:6px 0 14px;}
+  .stat{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:14px;}
+  .stat .v{font-family:var(--mono); font-variant-numeric:tabular-nums; font-size:26px; font-weight:600; line-height:1;}
+  .stat .v .u{font-size:13px; color:var(--muted); margin-left:2px;}
+  .stat .k{color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.1em; margin-top:6px;}
+  .stat .v.mint{color:var(--visited);}
+
+  /* map */
+  #map-wrap{background:var(--panel); border:1px solid var(--line); border-radius:18px; overflow:hidden;}
+  #map{height:56vh; min-height:320px; width:100%;}
+  #map-msg{display:none; padding:40px 20px; text-align:center; color:var(--muted); font-size:14px;}
+  .hint{color:var(--muted); font-size:12px; margin:8px 4px 0; text-align:center;}
+
+  /* search */
+  .search{margin-top:16px;}
+  label{display:block; color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.12em; margin:0 0 6px 2px;}
+  input[type=text]{
+    width:100%; background-color:var(--panel-2); color:var(--text); -webkit-text-fill-color:var(--text);
+    border:1px solid var(--line); border-radius:11px; padding:13px 12px; font-size:16px; font-family:var(--sans);
+    outline:none; -webkit-appearance:none; appearance:none;
+  }
+  input[type=text]:focus{border-color:var(--visited);}
+
+  /* visited chips */
+  .section-label{color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.14em; margin:22px 4px 10px; display:flex; justify-content:space-between;}
+  .chips{display:flex; flex-wrap:wrap; gap:8px;}
+  .chip{background:var(--panel); border:1px solid var(--line); border-radius:99px; padding:7px 12px; font-size:13px; display:flex; align-items:center; gap:7px;}
+  .chip .x{color:var(--muted); font-weight:700; cursor:pointer; line-height:1;}
+  .chip .x:hover{color:var(--amber);}
+  .empty{color:var(--muted); font-size:14px; border:1px dashed var(--line); border-radius:14px; padding:26px 18px; text-align:center;}
+
+  /* data */
+  .data{display:flex; flex-wrap:wrap; gap:8px; margin:22px 0 8px; justify-content:center;}
+  .btn{border:1px solid var(--line); background:var(--panel-2); color:var(--text); border-radius:11px;
+    padding:10px 14px; font-size:13px; font-weight:600; font-family:var(--sans); cursor:pointer; flex:1; min-width:120px;}
+  .btn:active{transform:scale(.99);}
+  .foot{color:var(--muted); font-size:11px; text-align:center; margin:14px 0 8px; line-height:1.6;}
+
+  /* jsvectormap tooltip tweak */
+  .jvm-tooltip{background:#111826; border:1px solid var(--line); font-family:var(--sans); border-radius:8px;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">✈</div>
+  <div>
+    <div class="name">Been There</div>
+    <div class="tag">tap a country you've visited</div>
+  </div>
+</header>
+
+<div class="stats">
+  <div class="stat"><div class="v mint" id="s-count">0</div><div class="k">Countries</div></div>
+  <div class="stat"><div class="v" id="s-pct">0<span class="u">%</span></div><div class="k">Of the world</div></div>
+  <div class="stat"><div class="v" id="s-cont">0<span class="u">/7</span></div><div class="k">Continents</div></div>
+</div>
+
+<div id="map-wrap">
+  <div id="map"></div>
+  <div id="map-msg"></div>
+</div>
+<p class="hint">Pinch to zoom · drag to pan · tap a country to toggle it</p>
+
+<div class="search">
+  <label>Add by name</label>
+  <input type="text" id="search" list="country-list" placeholder="Start typing a country…" autocomplete="off">
+  <datalist id="country-list"></datalist>
+</div>
+
+<div class="section-label"><span>Your countries</span><span id="count-label" class="mono"></span></div>
+<div class="chips" id="chips"></div>
+<div class="empty" id="empty">No countries yet — tap the map to start filling it in.</div>
+
+<div class="data">
+  <button class="btn" onclick="exportJSON()">Export backup</button>
+  <button class="btn" onclick="exportCSV()">Export CSV</button>
+  <button class="btn" onclick="document.getElementById('import-file').click()">Import</button>
+  <button class="btn" onclick="clearAll()" style="color:var(--amber);">Clear all</button>
+  <input id="import-file" type="file" accept="application/json" style="display:none" onchange="importJSON(event)">
+</div>
+<div class="foot" id="foot">Saved only on this device. The map itself loads from the internet, so you need a connection the first time.</div>
+
+<!-- jsVectorMap library + world map data -->
+<script src="https://cdn.jsdelivr.net/npm/jsvectormap@1.6.0/dist/js/jsvectormap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsvectormap@1.6.0/dist/maps/world.js"></script>
+
+<script>
+/* ============================================================
+   Been There — a world map of the countries you've visited.
+   Visited codes (ISO-3166 alpha-2) are stored in localStorage.
+   The map comes from jsVectorMap (loaded from a CDN at runtime).
+   ============================================================ */
+
+const KEY = 'beenthere_v1';
+const TOTAL_COUNTRIES = 195; // UN members + observers, the common "how many countries" figure
+
+/* ISO2 -> continent (best-effort; used only for the continents stat) */
+const CONTINENTS = {};
+(function(){
+  const groups = {
+    Europe:['AL','AD','AT','BY','BE','BA','BG','HR','CY','CZ','DK','EE','FI','FR','DE','GR','HU','IS','IE','IT','XK','LV','LI','LT','LU','MT','MD','MC','ME','NL','MK','NO','PL','PT','RO','RU','SM','RS','SK','SI','ES','SE','CH','UA','GB','VA'],
+    Asia:['AF','AM','AZ','BH','BD','BT','BN','KH','CN','GE','IN','ID','IR','IQ','IL','JP','JO','KZ','KW','KG','LA','LB','MY','MV','MN','MM','NP','KP','OM','PK','PS','PH','QA','SA','SG','KR','LK','SY','TW','TJ','TH','TL','TR','TM','AE','UZ','VN','YE'],
+    Africa:['DZ','AO','BJ','BW','BF','BI','CV','CM','CF','TD','KM','CG','CD','CI','DJ','EG','GQ','ER','SZ','ET','GA','GM','GH','GN','GW','KE','LS','LR','LY','MG','MW','ML','MR','MU','MA','MZ','NA','NE','NG','RW','ST','SN','SC','SL','SO','ZA','SS','SD','TZ','TG','TN','UG','ZM','ZW'],
+    'North America':['AG','BS','BB','BZ','CA','CR','CU','DM','DO','SV','GD','GT','HT','HN','JM','MX','NI','PA','KN','LC','VC','TT','US','GL'],
+    'South America':['AR','BO','BR','CL','CO','EC','GY','PY','PE','SR','UY','VE'],
+    Oceania:['AU','FJ','KI','MH','FM','NR','NZ','PW','PG','WS','SB','TO','TV','VU'],
+    Antarctica:['AQ']
+  };
+  for(const cont in groups) groups[cont].forEach(c=>CONTINENTS[c]=cont);
+})();
+
+let map = null;
+let visited = new Set();
+let names = {};   // code -> country name (from map data)
+
+/* ---------- storage ---------- */
+function load(){
+  try{
+    const raw = localStorage.getItem(KEY);
+    if(raw){ const d = JSON.parse(raw); if(Array.isArray(d.visited)) visited = new Set(d.visited); }
+  }catch(e){}
+}
+function save(){
+  try{ localStorage.setItem(KEY, JSON.stringify({ visited:[...visited] })); }catch(e){}
+}
+
+/* ---------- map setup ---------- */
+function initMap(){
+  if(typeof jsVectorMap === 'undefined'){
+    showMapError('The map library could not load. Check your internet connection and reload.');
+    return;
+  }
+  try{
+    map = new jsVectorMap({
+      selector:'#map',
+      map:'world',
+      backgroundColor:'transparent',
+      zoomButtons:true,
+      zoomOnScroll:true,
+      regionsSelectable:true,
+      selectedRegions:[...visited],
+      regionStyle:{
+        initial:{ fill:'#33405A', stroke:'#0E1116', strokeWidth:0.4 },
+        hover:{ fill:'#F5B851' },
+        selected:{ fill:'#34D399' },
+        selectedHover:{ fill:'#34D399' }
+      },
+      onRegionSelected(code, isSelected, selectedRegions){
+        visited = new Set(selectedRegions || []);
+        save();
+        updateStats();
+        renderChips();
+      },
+      onRegionTooltipShow(event, tooltip, code){
+        // keep default (shows country name)
+      }
+    });
+
+    // Pull country names from the loaded map data for the search list + chips.
+    const paths = (map.mapData && map.mapData.paths) || {};
+    for(const code in paths){ names[code] = paths[code].name || code; }
+    buildDatalist();
+    updateStats();
+    renderChips();
+  }catch(err){
+    console.error(err);
+    showMapError('Something went wrong drawing the map. Reload to try again.');
+  }
+}
+function showMapError(msg){
+  document.getElementById('map').style.display='none';
+  const el = document.getElementById('map-msg');
+  el.style.display='block';
+  el.textContent = msg;
+}
+
+/* ---------- stats ---------- */
+function updateStats(){
+  const n = visited.size;
+  document.getElementById('s-count').textContent = n;
+  const pct = Math.round((n / TOTAL_COUNTRIES) * 100);
+  document.getElementById('s-pct').innerHTML = pct + '<span class="u">%</span>';
+  const conts = new Set();
+  visited.forEach(c=>{ if(CONTINENTS[c]) conts.add(CONTINENTS[c]); });
+  document.getElementById('s-cont').innerHTML = conts.size + '<span class="u">/7</span>';
+  document.getElementById('count-label').textContent = n ? n + ' visited' : '';
+}
+
+/* ---------- chips ---------- */
+function renderChips(){
+  const wrap = document.getElementById('chips');
+  const empty = document.getElementById('empty');
+  if(!visited.size){ wrap.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display='none';
+  const list = [...visited].map(c=>({ c, n: names[c] || c })).sort((a,b)=>a.n.localeCompare(b.n));
+  wrap.innerHTML = list.map(({c,n})=>
+    `<span class="chip">${esc(n)}<span class="x" onclick="removeCountry('${c}')">✕</span></span>`
+  ).join('');
+}
+function esc(s){ return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+
+/* ---------- add / remove ---------- */
+function syncMap(){
+  if(map && map.setSelectedRegions){
+    try{ map.clearSelectedRegions(); map.setSelectedRegions([...visited]); }catch(e){}
+  }
+}
+function addCountry(code){
+  if(!code) return;
+  visited.add(code);
+  save(); syncMap(); updateStats(); renderChips();
+}
+function removeCountry(code){
+  visited.delete(code);
+  save(); syncMap(); updateStats(); renderChips();
+}
+
+/* ---------- search (datalist) ---------- */
+function buildDatalist(){
+  const dl = document.getElementById('country-list');
+  dl.innerHTML = Object.keys(names).sort((a,b)=>names[a].localeCompare(names[b]))
+    .map(c=>`<option value="${esc(names[c])}"></option>`).join('');
+}
+document.getElementById('search').addEventListener('change', function(){
+  const val = this.value.trim().toLowerCase();
+  const code = Object.keys(names).find(c=>names[c].toLowerCase()===val);
+  if(code){ addCountry(code); this.value=''; }
+});
+
+/* ---------- data portability ---------- */
+function download(filename, text, type){
+  const blob = new Blob([text],{type}); const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url; a.download=filename; a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+function exportJSON(){ download('been-there-backup.json', JSON.stringify({visited:[...visited]},null,2), 'application/json'); }
+function exportCSV(){
+  const rows = [['Code','Country','Continent']];
+  [...visited].sort().forEach(c=>rows.push([c, names[c]||'', CONTINENTS[c]||'']));
+  const csv = rows.map(r=>r.map(x=>`"${String(x).replace(/"/g,'""')}"`).join(',')).join('\n');
+  download('been-there.csv', csv, 'text/csv');
+}
+function importJSON(ev){
+  const f = ev.target.files[0]; if(!f) return;
+  const r = new FileReader();
+  r.onload = ()=>{
+    try{
+      const d = JSON.parse(r.result);
+      if(!Array.isArray(d.visited)) throw 0;
+      visited = new Set(d.visited);
+      save(); syncMap(); updateStats(); renderChips();
+      document.getElementById('foot').textContent = `Imported ${visited.size} countries.`;
+    }catch(e){ document.getElementById('foot').textContent = "That file didn't look like a Been There backup."; }
+    ev.target.value='';
+  };
+  r.readAsText(f);
+}
+function clearAll(){
+  if(!confirm('Clear every country from the map? This can\u2019t be undone. Export a backup first if you want to keep it.')) return;
+  visited = new Set();
+  try{ localStorage.removeItem(KEY); }catch(e){}
+  save(); syncMap(); updateStats(); renderChips();
+}
+
+/* ---------- init ---------- */
+load();
+window.addEventListener('load', ()=>{
+  initMap();
+  if('serviceWorker' in navigator){ navigator.serviceWorker.register('./sw.js').catch(()=>{}); }
+});
+</script>
+</body>
+</html>
